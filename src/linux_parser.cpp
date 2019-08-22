@@ -4,6 +4,8 @@
 #include <vector>
 #include <iostream>
 #include <unistd.h>
+#include <cmath>
+#include <algorithm>
 
 #include "linux_parser.h"
 
@@ -11,6 +13,7 @@ using std::stof;
 using std::string;
 using std::to_string;
 using std::vector;
+
 
 string LinuxParser::OperatingSystem() {
   string line;
@@ -133,7 +136,7 @@ float LinuxParser::CpuUtilization(int pid) {
   long hertz =  sysconf(_SC_CLK_TCK);
   
   string line, value;
-  int utime, stime, cutime, cstime, starttime = 0;
+  int utime, stime, cutime, cstime = 0;
   auto i = 0;
   std::ifstream filestream(kProcDirectory + std::to_string(pid) + kStatFilename);
   if (filestream.is_open()) {
@@ -154,10 +157,6 @@ float LinuxParser::CpuUtilization(int pid) {
 
         if (i == 16) {
           cstime = std::stoi(value);
-        }
-
-        if (i == 21) {
-          starttime = std::stoi(value);
         }
       }
       i++;
@@ -257,12 +256,15 @@ string LinuxParser::Command(int pid) {
   string line;
   std::ifstream stream(kProcDirectory + std::to_string(pid) + kCmdlineFilename);
   if (stream.is_open()) {
-    std::getline(stream, line);
+    std::getline(stream, line, '\n');
+    line.erase(std::find(line.begin(), line.end(), '\0'), line.end());
     return line;
   }
+
+  return "";
 }
 
-string LinuxParser::Ram(int pid) {
+float LinuxParser::Ram(int pid) {
   string line;
   string key;
   string value;
@@ -273,11 +275,17 @@ string LinuxParser::Ram(int pid) {
       while (linestream >> key) {
         if (key == "VmSize:") {
           linestream >> value;
-          return value;
+
+          auto memory = std::stoi(value);
+          memory /= 1000; // to MB
+
+          return memory;
         }
       }
     }
   }
+
+  return 0.0f;
 }
 
 string LinuxParser::Uid(int pid) {
@@ -296,6 +304,8 @@ string LinuxParser::Uid(int pid) {
       }
     }
   }
+
+  return "";
 }
 
 string LinuxParser::User(int pid) {

@@ -24,11 +24,13 @@ vector<Process>& System::Processes() {
     auto pids = LinuxParser::Pids();
     processes_ = std::vector<Process>{};
 
-    for (auto i = 0; i < pids.size(); i++) {
-        auto process = Process();
-        process.Pid(pids[i]);
+    for (int pid : pids) {
+        auto process = Process(pid);
         processes_.push_back(process);
     }
+
+    std::sort(processes_.begin(), processes_.end());
+    std::reverse(processes_.begin(), processes_.end());
 
     return processes_;
 }
